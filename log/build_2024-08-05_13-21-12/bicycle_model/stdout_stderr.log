@@ -1,0 +1,15 @@
+running develop
+running egg_info
+writing bicycle_model.egg-info/PKG-INFO
+writing dependency_links to bicycle_model.egg-info/dependency_links.txt
+writing entry points to bicycle_model.egg-info/entry_points.txt
+writing requirements to bicycle_model.egg-info/requires.txt
+writing top-level names to bicycle_model.egg-info/top_level.txt
+reading manifest file 'bicycle_model.egg-info/SOURCES.txt'
+writing manifest file 'bicycle_model.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/ege/kuartis_ws/install/bicycle_model/lib/python3.10/site-packages/bicycle-model.egg-link (link to .)
+Installing bicycle_control script to /home/ege/kuartis_ws/install/bicycle_model/lib/bicycle_model
+
+Installed /home/ege/kuartis_ws/build/bicycle_model
+running symlink_data

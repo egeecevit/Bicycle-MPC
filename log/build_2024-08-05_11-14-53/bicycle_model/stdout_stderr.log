@@ -1,0 +1,21 @@
+running develop
+running egg_info
+creating bicycle_model.egg-info
+writing bicycle_model.egg-info/PKG-INFO
+writing dependency_links to bicycle_model.egg-info/dependency_links.txt
+writing entry points to bicycle_model.egg-info/entry_points.txt
+writing requirements to bicycle_model.egg-info/requires.txt
+writing top-level names to bicycle_model.egg-info/top_level.txt
+writing manifest file 'bicycle_model.egg-info/SOURCES.txt'
+reading manifest file 'bicycle_model.egg-info/SOURCES.txt'
+writing manifest file 'bicycle_model.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/ege/kuartis_ws/install/bicycle_model/lib/python3.10/site-packages/bicycle-model.egg-link (link to .)
+
+Installed /home/ege/kuartis_ws/build/bicycle_model
+running symlink_data
+creating /home/ege/kuartis_ws/install/bicycle_model/share/ament_index
+creating /home/ege/kuartis_ws/install/bicycle_model/share/ament_index/resource_index
+creating /home/ege/kuartis_ws/install/bicycle_model/share/ament_index/resource_index/packages
+symbolically linking /home/ege/kuartis_ws/build/bicycle_model/resource/bicycle_model -> /home/ege/kuartis_ws/install/bicycle_model/share/ament_index/resource_index/packages
+symbolically linking /home/ege/kuartis_ws/build/bicycle_model/package.xml -> /home/ege/kuartis_ws/install/bicycle_model/share/bicycle_model
