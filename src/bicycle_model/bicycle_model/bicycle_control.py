@@ -103,7 +103,6 @@ class BicycleControl(Node):
         dist_max = math.sqrt(self.x[-2]**2 + self.y[-2]**2)
 
         if dist_p > dist_max:
-            print("I am here")
             self.alpha = np.arctan2((self.y[-2] - self.y_t), (self.x[-2] - self.x_t)) - self.theta
             
         elif len(self.x_in_circle) == 0:
