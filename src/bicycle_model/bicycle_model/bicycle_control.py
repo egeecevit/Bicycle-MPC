@@ -15,7 +15,7 @@ class BicycleControl(Node):
         self.bicyc_length = 1
         self.v = 10
         self.gamma_dot = 0
-        self.theta = 0 * math.pi / 180
+        self.theta = 45 * math.pi / 180
         self.dt = 0.005
         self.x_t = 0
         self.y_t = -2
@@ -96,7 +96,7 @@ class BicycleControl(Node):
         self.data_in_circle(self.x, self.x_t, self.y, self.y_t)
         # print(f'x_in_circle: {self.x_in_circle}, y_in_circle: {self.y_in_circle}')
         self.circle = self.update_circle(self.circle)
-
+        self.theta = np.arctan2(self.y[-2] - self.y[-1], self.x[-2] - self.x[-1])
         x_p, y_p = self.find_smallest(self.x, self.x_tp, self.y, self.y_tp)
         dist_p = math.sqrt((self.x_t)**2 + (self.y_t)**2)
         dist_tp = math.sqrt((self.x_tp)**2 + (self.y_tp)**2)
@@ -129,6 +129,7 @@ class BicycleControl(Node):
 
 
         steering_ang = math.atan((2 * self.bicyc_length * math.sin(self.alpha)) / self.ld)
+        steering_ang = 0 * math.pi / 180
         #----------------------------------------------------------------------------------------------
 
         # ----------------Rear wheel is the reference Bicycle Kinematic----------------------------------

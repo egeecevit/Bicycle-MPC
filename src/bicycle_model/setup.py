@@ -19,7 +19,10 @@ setup(
     license='TODO: License declaration',
     tests_require=['pytest'],
     entry_points={
-        'console_scripts': ['bicycle_control = bicycle_model.bicycle_control:main'
+        'console_scripts': ['bicycle_control = bicycle_model.bicycle_control:main',
+                            'path_publisher = bicycle_model.path_publisher:main',
+                            'bicycle_model = bicycle_model.bicycle_model:main',
+                            'controller = bicycle_model.controller:main'
         ],
     },
 )
