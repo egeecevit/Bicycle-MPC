@@ -1,3 +1,0 @@
-[console_scripts]
-bicycle_control = bicycle_model.bicycle_control:main
-
