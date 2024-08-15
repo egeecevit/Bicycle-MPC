@@ -22,7 +22,8 @@ setup(
         'console_scripts': ['bicycle_control = bicycle_model.bicycle_control:main',
                             'path_publisher = bicycle_model.path_publisher:main',
                             'bicycle_model = bicycle_model.bicycle_model:main',
-                            'controller = bicycle_model.controller:main'
+                            'controller = bicycle_model.controller:main',
+                            'cmd_joint_state = bicycle_model.cmd_joint_state:main'
         ],
     },
 )

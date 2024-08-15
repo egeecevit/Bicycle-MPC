@@ -128,14 +128,14 @@
     </joint>
 
 
-    <joint name = "base_front_cylinder_joint" type = "continuous">
+    <joint name = "steering_joint" type = "continuous">
         <origin xyz = "${base_length/2 - wheel_radius} 0 -0.01" rpy = "0 0 0"/>
         <parent link = "base_link"/>
         <child link = "front_wheel_cylinder"/>
         <axis xyz = "0 0 1"/>
     </joint>
 
-    <joint name = "cylinder_front_wheel_joint" type = "continuous">
+    <joint name = "front_wheel_joint" type = "continuous">
         <origin xyz = "0 0 ${-wheel_radius-wheel_length/2}" rpy = "${pi/2} 0 0"/>
         <parent link = "front_wheel_cylinder"/>
         <child link = "front_wheel"/>
@@ -148,7 +148,7 @@
         <child link = "rear_wheel_cylinder"/>
     </joint>
 
-    <joint name = "cylinder_rear_wheel_joint" type = "continuous">
+    <joint name = "rear_wheel_joint" type = "continuous">
         <origin xyz = "0 0 ${-wheel_radius-wheel_length/2}" rpy = "${pi/2} 0 0"/>
         <parent link = "rear_wheel_cylinder"/>
         <child link = "rear_wheel"/>
