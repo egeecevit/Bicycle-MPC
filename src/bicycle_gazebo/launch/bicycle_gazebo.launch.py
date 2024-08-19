@@ -1,5 +1,6 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
+from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import ( 
     Command, 
@@ -14,6 +15,63 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     urdf_path = os.path.join(get_package_share_path('bicycle_description'),'urdf','robot.urdf.xacro')
+
+    declare_odom = DeclareLaunchArgument(
+        "remap_odometry_tf",
+        default_value="false",
+        description="Remap odometry tf to /tf"
+    )
+    remap_odometry_tf = LaunchConfiguration("remap_odometry_tf")
+
+    robot_controllers = PathJoinSubstitution(
+        [
+            FindPackageShare("bicycle_description"),
+            "config",
+            "bicycle_controller.yaml",
+        ]
+    )
+
+    control_node_remapped = Node(
+        package="controller_manager",
+        executable="ros2_control_node",
+        parameters=[robot_controllers],
+        output="both",
+        remappings=[
+            ("/bicycle_steering_controller/tf_odometry", "/tf"),
+        ],
+        condition=IfCondition(remap_odometry_tf),
+    )
+
+    control_node = Node(
+        package="controller_manager",
+        executable="ros2_control_node",
+        parameters=[robot_controllers],
+        output="both",
+        remappings=[],
+        condition=UnlessCondition(remap_odometry_tf),
+    )
+
+    joint_state_broadcaster_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["joint_state_broadcaster"],
+    )
+
+    robot_bicycle_controller_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["bicycle_steering_controller"],
+    )
+    robot_position_controller_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["position_controller"],
+    )
+    robot_velocity_controller_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["velocity_controller"],
+    )
     
     robot_description = Command(['xacro ', urdf_path])
 
@@ -71,7 +129,14 @@ def generate_launch_description():
     return LaunchDescription([
         declare_use_sim_time,
         declare_world,
+        declare_odom,
         robot_state_publisher_node,
         gazebo,
-        spawn_entity
+        spawn_entity,
+        control_node,
+        control_node_remapped,
+        joint_state_broadcaster_spawner,
+        #robot_bicycle_controller_spawner,
+        robot_position_controller_spawner,
+        robot_velocity_controller_spawner,
     ])
