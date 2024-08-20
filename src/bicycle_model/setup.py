@@ -23,7 +23,8 @@ setup(
                             'path_publisher = bicycle_model.path_publisher:main',
                             'bicycle_model = bicycle_model.bicycle_model:main',
                             'controller = bicycle_model.controller:main',
-                            'cmd_joint_state = bicycle_model.cmd_joint_state:main'
+                            'cmd_joint_state = bicycle_model.cmd_joint_state:main',
+                            'imu_vel = bicycle_model.imu_vel:main',
         ],
     },
 )
