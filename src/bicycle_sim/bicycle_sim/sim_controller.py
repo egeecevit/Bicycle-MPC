@@ -143,11 +143,14 @@ class Controller(Node):
         if len(self.x_in_circle) > 0:
             self.x_tp, self.y_tp = self.x_in_circle[-1], self.y_in_circle[-1]
             self.alpha = np.arctan2((self.y_tp - self.y_t[-1]), (self.x_tp - self.x_t[-1])) - self.theta
-            print(f'xtp: {self.x_tp}, ytp: {self.y_tp}, alpha: {self.alpha}\n')
-            print(f'x_in_circle: {self.x_in_circle}, y_in_circle: {self.y_in_circle}')
+            # print(f'xtp: {self.x_tp}, ytp: {self.y_tp}, alpha: {self.alpha}\n')
+            # print(f'x_in_circle: {self.x_in_circle}, y_in_circle: {self.y_in_circle}')
             if dist_p > dist_tp:
                 self.x_tp, self.y_tp = self.x[-1], self.y[-1]
                 self.alpha = np.arctan2((self.y_tp - self.y_t[-1]), (self.x_tp - self.x_t[-1])) - self.theta
+
+        if self.alpha > math.pi/4:
+            self.alpha = math.pi/4
 
         steering_ang = math.atan((2 * self.bicyc_length * math.sin(self.alpha)) / self.ld)
         float64_msg = Float64MultiArray()
