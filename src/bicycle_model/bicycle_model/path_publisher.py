@@ -36,7 +36,7 @@ class PathPublisher(Node):
 
         for point in self.path_data:
             pose = PoseStamped()
-            pose.header.frame_id = 'map'
+            pose.header.frame_id = 'world'
             pose.header.stamp = self.get_clock().now().to_msg()
             pose.pose.position.x = point[0]
             pose.pose.position.y = point[1]
