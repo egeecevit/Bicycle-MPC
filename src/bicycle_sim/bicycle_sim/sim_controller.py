@@ -50,7 +50,7 @@ class Controller(Node):
         self.bicyc_length = 0.4
         self.v = 40.0
         self.theta = None
-        self.Kdd = 0.07
+        self.Kdd = 0.09
         self.ld = self.Kdd * self.v
 
         self.timer_ = self.create_timer(0.005, self.controller_callback)
@@ -149,7 +149,7 @@ class Controller(Node):
                 self.x_tp, self.y_tp = self.x[-1], self.y[-1]
                 self.alpha = np.arctan2((self.y_tp - self.y_t[-1]), (self.x_tp - self.x_t[-1])) - self.theta
 
-        if self.alpha > math.pi/4:
+        if self.alpha >= math.pi/4:
             self.alpha = math.pi/4
 
         steering_ang = math.atan((2 * self.bicyc_length * math.sin(self.alpha)) / self.ld)

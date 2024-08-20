@@ -106,8 +106,8 @@ def generate_launch_description():
         arguments=[
             '-entity', 'bicycle', 
             '-topic', '/robot_description',
-            '-x', '10.0',
-            '-y', '-2.0',
+            '-x', '0.0',
+            '-y', '-20.0',
             '-z', '0.5'
         ],
         output='screen',
