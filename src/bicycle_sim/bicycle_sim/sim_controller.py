@@ -50,7 +50,7 @@ class Controller(Node):
         self.bicyc_length = 0.4
         self.v = 40.0
         self.theta = None
-        self.Kdd = 0.05
+        self.Kdd = 0.07
         self.ld = self.Kdd * self.v
 
         self.timer_ = self.create_timer(0.005, self.controller_callback)
