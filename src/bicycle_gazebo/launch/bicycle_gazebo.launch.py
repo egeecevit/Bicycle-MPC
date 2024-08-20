@@ -15,6 +15,7 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     urdf_path = os.path.join(get_package_share_path('bicycle_description'),'urdf','robot.urdf.xacro')
+    rviz_config_path = os.path.join(get_package_share_path('bicycle_bringup'),'config','simu.rviz')
 
     declare_odom = DeclareLaunchArgument(
         "remap_odometry_tf",
@@ -106,7 +107,7 @@ def generate_launch_description():
             '-entity', 'bicycle', 
             '-topic', '/robot_description',
             '-x', '0',
-            '-y', '0',
+            '-y', '-2.0',
             '-z', '0.5'
         ],
         output='screen',
@@ -126,6 +127,24 @@ def generate_launch_description():
         }.items()
     )
 
+    tf_publisher = Node(
+        package='bicycle_sim',
+        executable='transformer',
+        output='screen',
+    )
+
+    rviz2_node = Node(
+        package="rviz2",
+        executable="rviz2",
+        arguments=['-d', rviz_config_path]
+    )
+
+    path_node = Node(
+        package="bicycle_model",
+        executable="path_publisher",
+        output="screen",
+    )
+
     return LaunchDescription([
         declare_use_sim_time,
         declare_world,
@@ -139,4 +158,7 @@ def generate_launch_description():
         #robot_bicycle_controller_spawner,
         robot_position_controller_spawner,
         robot_velocity_controller_spawner,
+        tf_publisher,
+        rviz2_node,
+        path_node,
     ])

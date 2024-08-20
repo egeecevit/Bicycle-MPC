@@ -31,7 +31,7 @@ class PathPublisher(Node):
 
     def publish_path(self):
         path_msg = Path()
-        path_msg.header.frame_id = 'map'
+        path_msg.header.frame_id = 'world'
         path_msg.header.stamp = self.get_clock().now().to_msg()
 
         for point in self.path_data:
