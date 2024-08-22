@@ -139,7 +139,7 @@
     </joint>
 
     <joint name = "front_wheel_joint" type = "continuous">
-        <origin xyz = "0 0 ${-wheel_radius-wheel_length/2}" rpy = "${pi/2} 0 0"/>
+        <origin xyz = "0 0 ${-wheel_radius-wheel_length/2}" rpy = "${-pi/2} 0 0"/>
         <parent link = "front_wheel_cylinder"/>
         <child link = "front_wheel"/>
         <axis xyz = "0 0 1"/>
@@ -152,7 +152,7 @@
     </joint>
 
     <joint name = "rear_wheel_joint" type = "continuous">
-        <origin xyz = "0 0 ${-wheel_radius-wheel_length/2}" rpy = "${pi/2} 0 0"/>
+        <origin xyz = "0 0 ${-wheel_radius-wheel_length/2}" rpy = "${-pi/2} 0 0"/>
         <parent link = "rear_wheel_cylinder"/>
         <child link = "rear_wheel"/>
         <axis xyz = "0 0 1"/>

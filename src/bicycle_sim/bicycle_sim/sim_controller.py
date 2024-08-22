@@ -158,8 +158,8 @@ class Controller(Node):
 
         self.position_cmd_publisher_.publish(float64_msg)
 
-        v_r = -self.v
-        v_f = -self.v * math.cos(steering_ang)
+        v_r = self.v
+        v_f = self.v * math.cos(steering_ang)
         velocity_msg = Float64MultiArray()
         velocity_msg.data = [v_r, v_f]
         self.velocity_cmd_publisher_.publish(velocity_msg)
