@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': ['transformer = bicycle_sim.transformer:main',
-                            'sim_controller = bicycle_sim.sim_controller:main'
+                            'sim_controller = bicycle_sim.sim_controller:main',
+                            'visualize_routes = bicycle_sim.visualize_routes:main'
         ],
     },
 )

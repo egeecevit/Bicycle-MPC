@@ -48,9 +48,11 @@ class Controller(Node):
         self.y_tp = 0
         self.alpha = 0
         self.bicyc_length = 0.4
-        self.v = 40.0
+        self.wheel_rad = 0.05
+        self.v = 5
+        self.w = self.v / self.wheel_rad
         self.theta = None
-        self.Kdd = 0.09
+        self.Kdd = 1
         self.ld = self.Kdd * self.v
 
         self.timer_ = self.create_timer(0.005, self.controller_callback)
@@ -158,8 +160,8 @@ class Controller(Node):
 
         self.position_cmd_publisher_.publish(float64_msg)
 
-        v_r = self.v
-        v_f = self.v * math.cos(steering_ang)
+        v_r = self.w * math.cos(steering_ang)
+        v_f = self.w
         velocity_msg = Float64MultiArray()
         velocity_msg.data = [v_r, v_f]
         self.velocity_cmd_publisher_.publish(velocity_msg)
