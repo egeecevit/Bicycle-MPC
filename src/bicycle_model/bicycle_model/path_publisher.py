@@ -19,7 +19,8 @@ class PathPublisher(Node):
         self.x = list(np.arange(0, 50.5, 0.5))
         self.y = []
         for num in self.x:
-            self.y.append(3*math.sin(num * 2.0 * math.pi / 40.0))
+            #self.y.append(3*math.sin(num * 2.0 * math.pi / 40.0))
+            self.y.append(0.0)
 
         self.path_data = []
 
