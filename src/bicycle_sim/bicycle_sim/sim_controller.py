@@ -59,7 +59,7 @@ class Controller(Node):
         self.v = None
         self.w = None
         self.theta = 0
-        self.Kdd = 1
+        self.Kdd = 1.5
         self.ld = None
 
         self.timer_ = self.create_timer(0.005, self.controller_callback)
@@ -167,11 +167,11 @@ class Controller(Node):
 
         steering_ang = math.atan((2 * self.bicyc_length * math.sin(self.alpha)) / self.ld)
 
-        if steering_ang >= math.pi/4:
-            steering_ang = math.pi/4
+        if steering_ang >= 35*math.pi/180:
+            steering_ang = 35*math.pi/180
 
-        if steering_ang <= -math.pi/4:
-            steering_ang = -math.pi/4
+        if steering_ang <= -35*math.pi/180:
+            steering_ang = -35*math.pi/180
 
         float64_msg = Float64MultiArray()
         float64_msg.data = [steering_ang]
