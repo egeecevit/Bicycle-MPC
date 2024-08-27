@@ -27,7 +27,7 @@ class PathPublisher(Node):
         for i, v in enumerate(self.x):
             self.path_data.append([v, self.y[i]])
 
-        self.timer = self.create_timer(0.005, self.publish_path)
+        self.timer = self.create_timer(1.0/30.0, self.publish_path)
         self.get_logger().info("Path published.")
 
     def publish_path(self):

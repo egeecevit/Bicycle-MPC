@@ -88,8 +88,8 @@ class VisualizeRoute(Node):
                 x_dec, y_dec, theta_dec = start_x, start_y, start_theta
                 #print(f'start_x: {start_x}, start_y: {start_y}, start_theta: {start_theta}')
                 
-                steering_angle_inc = 0.0  # Start with 0 steering angle for increasing
-                steering_angle_dec = 0.0  # Start with 0 steering angle for decreasing
+                steering_angle_inc = 0.0 * math.pi / 180  # Start with 0 steering angle for increasing
+                steering_angle_dec = 0.0 * math.pi / 180  # Start with 0 steering angle for decreasing
                 
                 for step in range(self.time_steps):
                     # Increasing steering angle
