@@ -34,25 +34,27 @@ class VisualizeRoute(Node):
             10
         )
 
-        self.current_x = 0
-        self.current_y = 0
-        self.current_theta = 0
+        self.current_x = 0.0
+        self.current_y = 0.0
+        self.current_theta = 0.0
         
         self.max_steering_angle = 35 * math.pi / 180  # Maximum steering angle
         self.steering_rate = 6 * math.pi / 180  # Rate at which the steering angle changes per time step
         self.min_steering_angle = -self.max_steering_angle # Minimum steering angle
-        self.time_steps = 5000  # Number of time steps to simulate
+        self.time_steps = 1000  # Number of time steps to simulate
         self.odom_status = None # Flag to check if the odometry message has been received
         self.velocities = None
         self.odom_timestamp = None
+        self.dt = 0.1
+        self.l = 3.30  # Wheelbase
 
-        self.timer = self.create_timer(0.001, self.timer_callback)
+        self.timer = self.create_timer(1.0/30.0, self.timer_callback)
 
         self.get_logger().info("Visualize Route node has been started.")
 
 
     def vel_callback(self, msg):
-        self.velocities = [msg.data/3.6, 2*msg.data/3.6, 3*msg.data/3.6]
+        self.velocities = [msg.data/3.6, 5*msg.data/3.6, 10*msg.data/3.6]
 
     def odom_callback(self, msg):
         self.current_x = msg.pose.pose.position.x
@@ -84,6 +86,7 @@ class VisualizeRoute(Node):
 
                 x_inc, y_inc, theta_inc = start_x, start_y, start_theta
                 x_dec, y_dec, theta_dec = start_x, start_y, start_theta
+                #print(f'start_x: {start_x}, start_y: {start_y}, start_theta: {start_theta}')
                 
                 steering_angle_inc = 0.0  # Start with 0 steering angle for increasing
                 steering_angle_dec = 0.0  # Start with 0 steering angle for decreasing
@@ -96,11 +99,11 @@ class VisualizeRoute(Node):
                     increasing_points.append(point_inc)
                     
                     if steering_angle_inc < self.max_steering_angle:
-                        steering_angle_inc += self.steering_rate * 0.01
+                        steering_angle_inc += self.steering_rate * self.dt
                     
-                    x_inc += v * np.cos(theta_inc) * 0.01
-                    y_inc += v * np.sin(theta_inc) * 0.01
-                    theta_inc += v * np.tan(steering_angle_inc) * 0.01 / 3.30
+                    x_inc += v * np.cos(theta_inc) * self.dt
+                    y_inc += v * np.sin(theta_inc) * self.dt
+                    theta_inc += v * np.tan(steering_angle_inc) * self.dt / self.l
                     
                     # Decreasing steering angle
                     point_dec = Point()
@@ -109,76 +112,75 @@ class VisualizeRoute(Node):
                     decreasing_points.append(point_dec)
                     
                     if steering_angle_dec > self.min_steering_angle:
-                        steering_angle_dec -= self.steering_rate * 0.01
+                        steering_angle_dec -= self.steering_rate * self.dt
                     
-                    x_dec += v * np.cos(theta_dec) * 0.01
-                    y_dec += v * np.sin(theta_dec) * 0.01
-                    theta_dec += v * np.tan(steering_angle_dec) * 0.01 / 3.30
+                    x_dec += v * np.cos(theta_dec) * self.dt
+                    y_dec += v * np.sin(theta_dec) * self.dt
+                    theta_dec += v * np.tan(steering_angle_dec) * self.dt / self.l
                 
                 all_paths.append((increasing_points, decreasing_points))
         
         return all_paths
     
     def timer_callback(self):
-        if self.odom_status and self.velocities is None:
-            return
+        if self.odom_status and self.velocities is not None:
         
-        marker_array = MarkerArray()
+            marker_array = MarkerArray()
 
-        # Calculate paths for different velocities with increasing and decreasing steering angles
-        all_paths = self.calculate_paths(self.current_x, self.current_y, self.current_theta)
-        
-        # Create markers for each path with different velocities
-        for i, (inc_points, dec_points) in enumerate(all_paths):
-            # Marker for increasing steering angle path
-            inc_marker = Marker()
-            inc_marker.header.frame_id = "world"
-            inc_marker.header.stamp = self.odom_timestamp
-            inc_marker.type = Marker.LINE_STRIP
-            inc_marker.action = Marker.ADD
-            inc_marker.scale.x = 0.1  # Line width
-            inc_marker.color.a = 1.0  # Alpha (transparency)
+            # Calculate paths for different velocities with increasing and decreasing steering angles
+            all_paths = self.calculate_paths(self.current_x, self.current_y, self.current_theta)
+            
+            # Create markers for each path with different velocities
+            for i, (inc_points, dec_points) in enumerate(all_paths):
+                # Marker for increasing steering angle path
+                inc_marker = Marker()
+                inc_marker.header.frame_id = "world"
+                inc_marker.header.stamp = self.odom_timestamp
+                inc_marker.type = Marker.LINE_STRIP
+                inc_marker.action = Marker.ADD
+                inc_marker.scale.x = 0.1  # Line width
+                inc_marker.color.a = 1.0  # Alpha (transparency)
 
-            # Assign different colors to each path
-            if i == 0:
-                inc_marker.color.r = 1.0
-                inc_marker.color.g = 0.0
-                inc_marker.color.b = 0.0  # Red
-            elif i == 1:
-                inc_marker.color.r = 0.0
-                inc_marker.color.g = 1.0
-                inc_marker.color.b = 0.0  # Green
-            else:
-                inc_marker.color.r = 0.0
-                inc_marker.color.g = 0.0
-                inc_marker.color.b = 1.0  # Blue
+                # Assign different colors to each path
+                if i == 0:
+                    inc_marker.color.r = 1.0
+                    inc_marker.color.g = 0.0
+                    inc_marker.color.b = 0.0  # Red
+                elif i == 1:
+                    inc_marker.color.r = 0.0
+                    inc_marker.color.g = 1.0
+                    inc_marker.color.b = 0.0  # Green
+                else:
+                    inc_marker.color.r = 0.0
+                    inc_marker.color.g = 0.0
+                    inc_marker.color.b = 1.0  # Blue
 
-            inc_marker.id = i * 2
-            inc_marker.points = inc_points
-            #inc_marker.lifetime = rclpy.duration.Duration(seconds=0.5).to_msg()
+                inc_marker.id = i * 2
+                inc_marker.points = inc_points
+                #inc_marker.lifetime = rclpy.duration.Duration(seconds=0.5).to_msg()
 
-            marker_array.markers.append(inc_marker)
+                marker_array.markers.append(inc_marker)
 
-            # Marker for decreasing steering angle path
-            dec_marker = Marker()
-            dec_marker.header.frame_id = "world"
-            dec_marker.header.stamp = self.odom_timestamp
-            dec_marker.type = Marker.LINE_STRIP
-            dec_marker.action = Marker.ADD
-            dec_marker.scale.x = 0.1  # Line width
-            dec_marker.color.a = 1.0  # Alpha (transparency)
+                # Marker for decreasing steering angle path
+                dec_marker = Marker()
+                dec_marker.header.frame_id = "world"
+                dec_marker.header.stamp = self.odom_timestamp
+                dec_marker.type = Marker.LINE_STRIP
+                dec_marker.action = Marker.ADD
+                dec_marker.scale.x = 0.1  # Line width
+                dec_marker.color.a = 1.0  # Alpha (transparency)
 
-            # Use the same color as the increasing path for consistency
-            dec_marker.color = inc_marker.color
+                # Use the same color as the increasing path for consistency
+                dec_marker.color = inc_marker.color
 
-            dec_marker.id = i * 2 + 1
-            dec_marker.points = dec_points
-            #dec_marker.lifetime = rclpy.duration.Duration(seconds=0.5).to_msg()
+                dec_marker.id = i * 2 + 1
+                dec_marker.points = dec_points
+                #dec_marker.lifetime = rclpy.duration.Duration(seconds=0.5).to_msg()
 
-            marker_array.markers.append(dec_marker)
+                marker_array.markers.append(dec_marker)
 
-        # Publish the marker array
-        self.marker_publisher_.publish(marker_array)
+            # Publish the marker array
+            self.marker_publisher_.publish(marker_array)
 
 def main(args=None):
     rclpy.init(args=args)

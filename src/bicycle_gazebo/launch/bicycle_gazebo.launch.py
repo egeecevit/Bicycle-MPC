@@ -148,7 +148,6 @@ def generate_launch_description():
         spawn_entity,
         control_node,
         joint_state_broadcaster_spawner,
-        #robot_bicycle_controller_spawner,
         robot_position_controller_spawner,
         robot_velocity_controller_spawner,
         tf_publisher,

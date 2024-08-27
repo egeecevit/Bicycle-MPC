@@ -59,7 +59,7 @@ class Controller(Node):
         self.v = None
         self.w = None
         self.theta = 0
-        self.Kdd = 2.0
+        self.Kdd = 1
         self.ld = None
 
         self.timer_ = self.create_timer(0.005, self.controller_callback)
