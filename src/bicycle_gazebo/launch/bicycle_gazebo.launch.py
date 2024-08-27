@@ -84,7 +84,7 @@ def generate_launch_description():
             '-entity', 'bicycle', 
             '-topic', '/robot_description',
             '-x', '0.0',
-            '-y', '-10.0',
+            '-y', '-5.0',
             '-z', '0.0'
         ],
         output='screen',
@@ -146,7 +146,7 @@ def generate_launch_description():
         robot_state_publisher_node,
         gazebo,
         spawn_entity,
-        control_node,
+        #control_node,
         joint_state_broadcaster_spawner,
         robot_position_controller_spawner,
         robot_velocity_controller_spawner,
