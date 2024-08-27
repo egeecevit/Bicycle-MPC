@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.node import Node
 import math
-from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import Float64MultiArray, Float64
 import numpy as np
 from nav_msgs.msg import Path
 from nav_msgs.msg import Odometry
@@ -38,6 +38,13 @@ class Controller(Node):
             10
         )
 
+        self.vel_subscriber_ = self.create_subscription(
+            Float64,
+            '/vel_topic',
+            self.vel_callback,
+            10
+        )
+
         self.x_t = []
         self.y_t = []
         self.x = []
@@ -49,14 +56,19 @@ class Controller(Node):
         self.alpha = 0
         self.bicyc_length = 0.4
         self.wheel_rad = 0.05
-        self.v = 5
-        self.w = self.v / self.wheel_rad
-        self.theta = None
-        self.Kdd = 1
-        self.ld = self.Kdd * self.v
+        self.v = None
+        self.w = None
+        self.theta = 0
+        self.Kdd = 2.0
+        self.ld = None
 
         self.timer_ = self.create_timer(0.005, self.controller_callback)
         self.get_logger().info("Controller node has been started.")
+
+    def vel_callback(self, msg):
+        self.v = msg.data
+        self.w = self.v / self.wheel_rad
+        self.ld = self.Kdd * self.v
 
     def odom_callback(self,msg):
         self.x_t.append(msg.pose.pose.position.x)
@@ -125,9 +137,11 @@ class Controller(Node):
 
         if len(self.x_t) < 2:
             return
-        self.theta = np.arctan2(self.y_t[-1] - self.y_t[-2], self.x_t[-1] - self.x_t[-2])
+        
+        if self.v is None:
+            return
+        
         self.data_in_circle(self.x, self.x_t[-1], self.y, self.y_t[-1])
-        #self.circle = self.update_circle(self.circle)
 
         dist_p = math.sqrt((self.x_t[-1])**2 + (self.y_t[-1])**2)
         dist_tp = math.sqrt((self.x_tp)**2 + (self.y_tp)**2)
@@ -151,10 +165,14 @@ class Controller(Node):
                 self.x_tp, self.y_tp = self.x[-1], self.y[-1]
                 self.alpha = np.arctan2((self.y_tp - self.y_t[-1]), (self.x_tp - self.x_t[-1])) - self.theta
 
-        if self.alpha >= math.pi/4:
-            self.alpha = math.pi/4
-
         steering_ang = math.atan((2 * self.bicyc_length * math.sin(self.alpha)) / self.ld)
+
+        if steering_ang >= math.pi/4:
+            steering_ang = math.pi/4
+
+        if steering_ang <= -math.pi/4:
+            steering_ang = -math.pi/4
+
         float64_msg = Float64MultiArray()
         float64_msg.data = [steering_ang]
 

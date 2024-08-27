@@ -21,7 +21,8 @@ setup(
     entry_points={
         'console_scripts': ['transformer = bicycle_sim.transformer:main',
                             'sim_controller = bicycle_sim.sim_controller:main',
-                            'visualize_routes = bicycle_sim.visualize_routes:main'
+                            'visualize_routes = bicycle_sim.visualize_routes:main',
+                            'vel_publisher = bicycle_sim.vel_publisher:main'
         ],
     },
 )

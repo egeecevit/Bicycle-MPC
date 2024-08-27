@@ -84,7 +84,7 @@ def generate_launch_description():
             '-entity', 'bicycle', 
             '-topic', '/robot_description',
             '-x', '0.0',
-            '-y', '0.0',
+            '-y', '-10.0',
             '-z', '0.0'
         ],
         output='screen',
@@ -128,6 +128,18 @@ def generate_launch_description():
         output="screen",
     )
 
+    vis_node = Node(
+        package="bicycle_sim",
+        executable="visualize_routes",
+        output="screen",
+    )
+
+    vel_publisher_node = Node(
+        package="bicycle_sim",
+        executable="vel_publisher",
+        output="screen",
+    )
+
     return LaunchDescription([
         declare_use_sim_time,
         declare_world,
@@ -142,5 +154,7 @@ def generate_launch_description():
         tf_publisher,
         rviz2_node,
         path_node,
+        vis_node,
         sim_node,
+        vel_publisher_node,
     ])

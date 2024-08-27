@@ -7,6 +7,7 @@ import numpy as np
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Point
 from visualization_msgs.msg import Marker, MarkerArray
+from std_msgs.msg import Float64
 
 
 class VisualizeRoute(Node):
@@ -26,6 +27,13 @@ class VisualizeRoute(Node):
             10
         )
 
+        self.vel_subscriber_ = self.create_subscription(
+            Float64,
+            '/vel_topic',
+            self.vel_callback,
+            10
+        )
+
         self.current_x = 0
         self.current_y = 0
         self.current_theta = 0
@@ -35,17 +43,23 @@ class VisualizeRoute(Node):
         self.min_steering_angle = -self.max_steering_angle # Minimum steering angle
         self.time_steps = 5000  # Number of time steps to simulate
         self.odom_status = None # Flag to check if the odometry message has been received
-        self.velocities = [5.0/3.6, 10.0/3.6, 20.0/3.6]  # List of velocities
+        self.velocities = None
+        self.odom_timestamp = None
 
-        self.timer = self.create_timer(0.1, self.timer_callback)
+        self.timer = self.create_timer(0.001, self.timer_callback)
 
         self.get_logger().info("Visualize Route node has been started.")
+
+
+    def vel_callback(self, msg):
+        self.velocities = [msg.data/3.6, 2*msg.data/3.6, 3*msg.data/3.6]
 
     def odom_callback(self, msg):
         self.current_x = msg.pose.pose.position.x
         self.current_y = msg.pose.pose.position.y   
         self.current_theta = self.quat_to_yaw(msg.pose.pose.orientation)
         self.odom_status = True
+        self.odom_timestamp = msg.header.stamp
 
     def quat_to_yaw(self, quaternion):
         x = quaternion.x
@@ -62,51 +76,51 @@ class VisualizeRoute(Node):
     
     def calculate_paths(self, start_x, start_y, start_theta):
         all_paths = []
+        if self.velocities is not None:
+            for v in self.velocities:
+                # For each velocity, calculate paths with increasing and decreasing steering angles
+                increasing_points = []
+                decreasing_points = []
 
-        for v in self.velocities:
-            # For each velocity, calculate paths with increasing and decreasing steering angles
-            increasing_points = []
-            decreasing_points = []
-
-            x_inc, y_inc, theta_inc = start_x, start_y, start_theta
-            x_dec, y_dec, theta_dec = start_x, start_y, start_theta
-            
-            steering_angle_inc = 0.0  # Start with 0 steering angle for increasing
-            steering_angle_dec = 0.0  # Start with 0 steering angle for decreasing
-            
-            for step in range(self.time_steps):
-                # Increasing steering angle
-                point_inc = Point()
-                point_inc.x = x_inc
-                point_inc.y = y_inc
-                increasing_points.append(point_inc)
+                x_inc, y_inc, theta_inc = start_x, start_y, start_theta
+                x_dec, y_dec, theta_dec = start_x, start_y, start_theta
                 
-                if steering_angle_inc < self.max_steering_angle:
-                    steering_angle_inc += self.steering_rate * 0.01
+                steering_angle_inc = 0.0  # Start with 0 steering angle for increasing
+                steering_angle_dec = 0.0  # Start with 0 steering angle for decreasing
                 
-                x_inc += v * np.cos(theta_inc) * 0.01
-                y_inc += v * np.sin(theta_inc) * 0.01
-                theta_inc += v * np.tan(steering_angle_inc) * 0.01 / 3.30
+                for step in range(self.time_steps):
+                    # Increasing steering angle
+                    point_inc = Point()
+                    point_inc.x = x_inc
+                    point_inc.y = y_inc
+                    increasing_points.append(point_inc)
+                    
+                    if steering_angle_inc < self.max_steering_angle:
+                        steering_angle_inc += self.steering_rate * 0.01
+                    
+                    x_inc += v * np.cos(theta_inc) * 0.01
+                    y_inc += v * np.sin(theta_inc) * 0.01
+                    theta_inc += v * np.tan(steering_angle_inc) * 0.01 / 3.30
+                    
+                    # Decreasing steering angle
+                    point_dec = Point()
+                    point_dec.x = x_dec
+                    point_dec.y = y_dec
+                    decreasing_points.append(point_dec)
+                    
+                    if steering_angle_dec > self.min_steering_angle:
+                        steering_angle_dec -= self.steering_rate * 0.01
+                    
+                    x_dec += v * np.cos(theta_dec) * 0.01
+                    y_dec += v * np.sin(theta_dec) * 0.01
+                    theta_dec += v * np.tan(steering_angle_dec) * 0.01 / 3.30
                 
-                # Decreasing steering angle
-                point_dec = Point()
-                point_dec.x = x_dec
-                point_dec.y = y_dec
-                decreasing_points.append(point_dec)
-                
-                if steering_angle_dec > self.min_steering_angle:
-                    steering_angle_dec -= self.steering_rate * 0.01
-                
-                x_dec += v * np.cos(theta_dec) * 0.01
-                y_dec += v * np.sin(theta_dec) * 0.01
-                theta_dec += v * np.tan(steering_angle_dec) * 0.01 / 3.30
-            
-            all_paths.append((increasing_points, decreasing_points))
+                all_paths.append((increasing_points, decreasing_points))
         
         return all_paths
     
     def timer_callback(self):
-        if self.odom_status is None:
+        if self.odom_status and self.velocities is None:
             return
         
         marker_array = MarkerArray()
@@ -119,7 +133,7 @@ class VisualizeRoute(Node):
             # Marker for increasing steering angle path
             inc_marker = Marker()
             inc_marker.header.frame_id = "world"
-            inc_marker.header.stamp = self.get_clock().now().to_msg()
+            inc_marker.header.stamp = self.odom_timestamp
             inc_marker.type = Marker.LINE_STRIP
             inc_marker.action = Marker.ADD
             inc_marker.scale.x = 0.1  # Line width
@@ -141,14 +155,14 @@ class VisualizeRoute(Node):
 
             inc_marker.id = i * 2
             inc_marker.points = inc_points
-            inc_marker.lifetime = rclpy.duration.Duration(seconds=0.5).to_msg()
+            #inc_marker.lifetime = rclpy.duration.Duration(seconds=0.5).to_msg()
 
             marker_array.markers.append(inc_marker)
 
             # Marker for decreasing steering angle path
             dec_marker = Marker()
             dec_marker.header.frame_id = "world"
-            dec_marker.header.stamp = self.get_clock().now().to_msg()
+            dec_marker.header.stamp = self.odom_timestamp
             dec_marker.type = Marker.LINE_STRIP
             dec_marker.action = Marker.ADD
             dec_marker.scale.x = 0.1  # Line width
@@ -159,7 +173,7 @@ class VisualizeRoute(Node):
 
             dec_marker.id = i * 2 + 1
             dec_marker.points = dec_points
-            dec_marker.lifetime = rclpy.duration.Duration(seconds=0.5).to_msg()
+            #dec_marker.lifetime = rclpy.duration.Duration(seconds=0.5).to_msg()
 
             marker_array.markers.append(dec_marker)
 
