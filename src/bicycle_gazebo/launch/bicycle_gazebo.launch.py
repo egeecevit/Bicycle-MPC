@@ -84,7 +84,7 @@ def generate_launch_description():
             '-entity', 'bicycle', 
             '-topic', '/robot_description',
             '-x', '0.0',
-            '-y', '-5.0',
+            '-y', '0.0',
             '-z', '0.0'
         ],
         output='screen',
@@ -140,6 +140,12 @@ def generate_launch_description():
         output="screen",
     )
 
+    circle_node = Node(
+        package="bicycle_sim",
+        executable="circles",
+        output="screen",
+    )
+
     return LaunchDescription([
         declare_use_sim_time,
         declare_world,
@@ -156,4 +162,5 @@ def generate_launch_description():
         vis_node,
         sim_node,
         vel_publisher_node,
+        circle_node,
     ])

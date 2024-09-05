@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'bicycle_sim'
+package_name = 'bicycle_mpc'
 
 setup(
     name=package_name,
@@ -19,11 +19,7 @@ setup(
     license='TODO: License declaration',
     tests_require=['pytest'],
     entry_points={
-        'console_scripts': ['transformer = bicycle_sim.transformer:main',
-                            'sim_controller = bicycle_sim.sim_controller:main',
-                            'visualize_routes = bicycle_sim.visualize_routes:main',
-                            'vel_publisher = bicycle_sim.vel_publisher:main',
-                            'circles = bicycle_sim.circles:main'
+        'console_scripts': [
         ],
     },
 )
