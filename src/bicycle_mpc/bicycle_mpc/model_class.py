@@ -75,8 +75,8 @@ class BicycleModelMPC:
         g = []
 
         # Define the Q and R matrices for state and control penalties
-        Q = ca.diagcat(1.0, 1.0, 1.0, 1.0, 5.0, 5.0)  # cte and epsi are weighted more because they are the main things to be penalized
-        R = ca.diagcat(1.0, 1.0)  # Adjust weights for control inputs
+        Q = ca.diagcat(1.0, 1.0, 1.0, 1.0, 50.0, 50.0)  # cte and epsi are weighted more because they are the main things to be penalized
+        R = ca.diagcat(0.1, 0.1)  # Adjust weights for control inputs
 
         # Initial state constraint
         g.append(X[:, 0] - initial_state)  # Ensure X[:, 0] == initial_state
@@ -108,9 +108,9 @@ class BicycleModelMPC:
 
         # Define bounds
         # Velocity, CTE, and EPSI limits
-        vel_limit = [0, 2.5]
-        cte_limit = [0, 0.2]
-        epsi_limit = np.deg2rad(1)
+        vel_limit = [0, 5.0]
+        cte_limit = [0, 0.5]
+        epsi_limit = np.deg2rad(10)
 
         # State bounds: [x, y, psi, v, cte, epsi]
         lb_states = ca.DM([-ca.inf, -ca.inf, -ca.inf, vel_limit[0], cte_limit[0], -epsi_limit])  
@@ -144,10 +144,39 @@ class BicycleModelMPC:
 
         # Define the optimization problem
         nlp = {'x': decision_vars, 'f': cost, 'g': g}
-        solver = ca.nlpsol('solver', 'ipopt', nlp)
+        # Set IPOPT options to suppress output
+        options = {
+            'ipopt': {
+                'print_level': 0,  # Suppresses IPOPT output
+                'sb': 'yes',       # Suppress banner
+                'tol': 1e-6,
+            },
+            'print_time': 0
+        }
+        solver = ca.nlpsol('solver', 'ipopt', nlp, options)
 
         # Initial guess for the decision variables
         x0_decision_vars = ca.DM.zeros(decision_vars.shape)
+        '''-------------------------'''
+        # Create a list to hold the state trajectory guesses, starting with the initial state
+        # state_guess = [initial_state]
+
+        # # Propagate the initial state forward using zero control inputs
+        # for _ in range(self.N):
+        #     # Predict next state assuming zero steering (delta) and zero acceleration (a)
+        #     next_state = self.f(state_guess[-1], [0, 0])  # Zero control input
+        #     state_guess.append(next_state.full().flatten())
+
+        # # Flatten the state trajectory guesses into a single column vector
+        # state_guess = np.hstack(state_guess).flatten()
+
+        # # Control input guess: All zeros (no control action)
+        # control_guess = np.zeros(2 * self.N)  # [delta, a] for N steps
+
+        # # Combine state and control guesses into the decision variable vector
+        # x0_decision_vars = np.hstack([state_guess, control_guess]).reshape(-1, 1)
+
+        '''-------------------------'''
 
         # Solve the optimization problem
         solution = solver(x0=x0_decision_vars, 
@@ -159,6 +188,15 @@ class BicycleModelMPC:
         # Extract the optimal control inputs
         optimal_controls = solution['x'][num_states:num_states + 2 * self.N]
         optimal_controls = ca.reshape(optimal_controls, 2, self.N)
+
+        # Extract the predicted state trajectory (including velocity)
+        predicted_states = solution['x'][:num_states]
+        predicted_states = ca.reshape(predicted_states, 6, self.N + 1)
+
+        # Extract the velocity trajectory from the predicted states
+        predicted_velocity = predicted_states[3, :]  # Extract the velocity component (4th row)
+
+        return optimal_controls.full(), predicted_velocity.full(), predicted_states.full() # Convert to a numpy array optimal_controls[:,0] is the optimal control for the first step
         
-        return optimal_controls.full()  # Convert to a numpy array optimal_controls[:,0] is the optimal control for the first step
+       
 

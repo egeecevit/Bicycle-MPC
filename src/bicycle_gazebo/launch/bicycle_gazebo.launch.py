@@ -159,8 +159,8 @@ def generate_launch_description():
         tf_publisher,
         rviz2_node,
         path_node,
-        vis_node,
-        sim_node,
-        vel_publisher_node,
-        circle_node,
+        #vis_node,
+        #sim_node,
+        #vel_publisher_node,
+        #circle_node,
     ])
