@@ -66,8 +66,6 @@ class MPC(Node):
         self.odom_status = None
         self.theta = 0.0
         self.odom_timestamp = None
-        self.delta_c = 0.0
-        self.a_c = 0.0
         self.v_init = 0.0
         self.predicted_states = None
         self.initial_state = None
@@ -81,26 +79,6 @@ class MPC(Node):
 
         self.timer_ = self.create_timer(1.0/30.0, self.controller_callback)
         self.get_logger().info("Controller node has been started.")
-
-
-    # def control_loop(self):
-    #     start_time = time.time()
-    #     optimal_controls, predicted_vel, predicted_states = self.mpc.solve(self.initial_state)
-
-    #     control_input = optimal_controls[:, 0]
-    #     delta = control_input[0]  # Steering angle
-    #     a = control_input[1] # Acceleration
-    #     self.v = predicted_vel[0]  # Predicted velocity
-    #     # print(f'predicted_x = {predicted_states[0,0]}\n, predicted_y = {predicted_states[1,0]}\n, predicted_psi = {predicted_states[2,0]}\n, predicted_v = {predicted_states[3,0]}\n, predicted_cte = {predicted_states[4,0]}\n, predicted_epsi = {predicted_states[5,0]}\n')
-    #     # print("-----------------------------------")
-    #     end_time = time.time()
-    #     #self.get_logger().info(f"Control loop duration: {end_time - start_time:.4f} seconds")
-
-    #     self.delta = delta
-    #     self.a = a
-    #     self.predicted_states = predicted_states
-
-    #     return delta, a, predicted_states
 
     #------------------------------------------------------------------------------------------------#
     #CASADI NONLINEAR SOLVER PART#
@@ -128,34 +106,12 @@ class MPC(Node):
         psi_next = self.psi_m + (self.v_m / self.L) * self.delta * self.dt
         v_next = self.v_m + self.a * self.dt
 
-        # Expicitly define the cte and epsi which is not ideal
-        # cte_next = 3*ca.sin(x_next * 2.0 * math.pi / 40.0) - y_next
-        # epsi_next = ca.atan((2.0 * math.pi / 40.0) * 3 * ca.cos(x_next * 2.0 * math.pi / 40.0)) - psi_next
-        # cte_next = self.y - self.y_m
-        # epsi_next = ca.atan((2.0 * math.pi / 40.0) * 3 * ca.cos(x_next * 2.0 * math.pi / 40.0)) - psi_next
-        # Include cte and epsi in the next state calculation
-        # predicted_cte, predicted_epsi = self.calculate_errors_symbolic(x_next, y_next, psi_next)
-        # cte_next = predicted_cte
-        #epsi_next = predicted_epsi
-        # self.get_logger().info(f'cte_next = {cte_next.shape}, epsi_next = {epsi_next.shape}, x_next = {x_next.shape}')
-        #self.get_logger().info(f'y_next = {y_next.shape}, y_m = {self.y_m.shape}, path_y = {len(self.y)}')
-
         # Update the state transition function to include cte and epsi
         self.f = ca.Function('f', [self.state, self.control], 
                             [ca.vertcat(x_next, y_next, psi_next, v_next)])
         
 
     def solve(self, initial_state):
-        """
-        Solve the MPC problem given the initial state.
-
-        Parameters:
-        initial_state (list or np.array): Initial state [x, y, psi, v, cte, epsi].
-
-        Returns:
-        np.array: Optimal control inputs trajectory.
-        """
-
         # Define prediction horizon variables
         X = ca.MX.sym('X', 4, self.N+1)  # State trajectory
         U = ca.MX.sym('U', 2, self.N)    # Control trajectory
@@ -177,15 +133,9 @@ class MPC(Node):
             x = X[:, k]
 
             cost += 5.0 * (x[3] - 1.2)**2  # Penalize velocity deviation from 1.0
-            # cost += ca.mtimes([x.T, Q, x])
-
-
-            # cte= 3*ca.sin(x[0] * 2.0 * math.pi / 40.0) - x[1]
-            # epsi = ca.atan((2.0 * math.pi / 40.0) * 3 * ca.cos(x[0] * 2.0 * math.pi / 40.0)) - x[2]
 
             cte, epsi = self.calculate_errors_symbolic_spline(x[0], x[1], x[2]) 
             
-
             cost += 50 * cte**2 + 100 * epsi**2  # Penalize cte and epsi 
 
             # Control cost: penalize magnitude of control inputs
@@ -210,12 +160,8 @@ class MPC(Node):
         # Define bounds
         # Velocity, CTE, and EPSI limits
         vel_limit = [0, 1.5]
-        # cte_limit = 0.5
-        # epsi_limit = np.deg2rad(10)
 
-        # State bounds: [x, y, psi, v, cte, epsi]
-        # lb_states = ca.DM([-ca.inf, -ca.inf, -ca.inf, vel_limit[0], -cte_limit, -epsi_limit])  
-        # ub_states = ca.DM([ca.inf, ca.inf, ca.inf, vel_limit[1], cte_limit, epsi_limit])
+        # State bounds: [x, y, psi, v]
         lb_states = ca.DM([-ca.inf, -ca.inf, -ca.inf, vel_limit[0]])  
         ub_states = ca.DM([ca.inf, ca.inf, ca.inf, vel_limit[1]])
 
@@ -263,14 +209,12 @@ class MPC(Node):
 
         # Initial guess for the decision variables
         #x0_decision_vars = ca.DM.zeros(decision_vars.shape)
-        '''-------------------------THIS IS BETTER THAN ABOVE ONE-------------------------'''
-        # # Create a list to hold the state trajectory guesses, starting with the initial state
         state_guess = [initial_state]
 
         # Propagate the initial state forward using zero control inputs
         for _ in range(self.N):
             # Predict next state assuming zero steering (delta) and zero acceleration (a)
-            next_state = self.f(state_guess[-1], [0, 0])  # Zero control input # TODO current input? 
+            next_state = self.f(state_guess[-1], [0, 0])  # Zero control input
             state_guess.append(next_state.full().flatten())
 
         # Flatten the state trajectory guesses into a single column vector
@@ -309,11 +253,7 @@ class MPC(Node):
 
 
     #------------------------------------------------------------------------------------------------#
-    # def spline(self, x, y):
-    #     self.spline_func = InterpolatedUnivariateSpline(x, y)
-    #     self.derivative_func = self.spline_func.derivative()
 
-        #return self.spline_func, self.derivative_func
     def odom_callback(self,msg):
         self.x_t.append(msg.pose.pose.position.x)
         self.y_t.append(msg.pose.pose.position.y)
@@ -365,12 +305,9 @@ class MPC(Node):
     
     def publish_predicted_states(self, predicted_states):
         marker_array = MarkerArray()
-        # self.get_logger().info(f'predicted_states[0]= {predicted_states[0,0]}, predicted_states[1]= {predicted_states[1,0]}')
-        # self.get_logger().info(f'current_x = {self.x_t[-1]}, current_y = {self.y_t[-1]}')
         for i in range(predicted_states.shape[1]):  # Loop through each predicted state
             x = predicted_states[0, i]
             y = predicted_states[1, i]
-            #self.get_logger().info(f'i = {i} predicted_cte = {predicted_states[4,i]}, predicted_epsi = {predicted_states[5,i]}')
             marker = self.create_marker(i, (x, y, 0))
             marker_array.markers.append(marker)
 
@@ -398,50 +335,6 @@ class MPC(Node):
 
         return cte, epsi
     
-    # def calculate_errors_symbolic(self, x_pred, y_pred, psi_pred):
-    #     # Convert path coordinates to CasADi MX types for symbolic calculations
-    #     path_x = ca.MX(self.x)  # CasADi symbolic path coordinates
-    #     path_y = ca.MX(self.y)
-
-    #     # Find the index of the closest point on the path symbolically
-    #     min_distance = ca.inf
-    #     min_index = 0
-
-    #     for i in range(len(self.x)):
-    #         distance = ca.sqrt((path_x[i] - x_pred)**2 + (path_y[i] - y_pred)**2)
-    #         min_index = ca.if_else(distance < min_distance, i, min_index)
-    #         min_distance = ca.if_else(distance < min_distance, distance, min_distance)
-
-    #     # Calculate the slope and angle at the closest point symbolically
-    #     idx_next = min_index + 1
-    #     #idx_prev = ca.if_else(min_index > 0, min_index - 1, min_index)
-
-    #     # path_slope = ca.if_else(
-    #     #     min_index < len(self.x) - 1,
-    #     #     (path_y[idx_next] - path_y[min_index]) / (path_x[idx_next] - path_x[min_index]),
-    #     #     (path_y[min_index] - path_y[idx_prev]) / (path_x[min_index] - path_x[idx_prev])
-    #     # )
-    #     path_slope = ca.if_else(ca.fabs(path_x[idx_next] - path_x[min_index]) > 1e-3,  # Avoid division by very small numbers
-    #         (path_y[idx_next] - path_y[min_index]) / (path_x[idx_next] - path_x[min_index]),
-    #         0.0)
-        
-    #     path_slope = ca.if_else(path_slope == ca.inf, 0.0, path_slope)  # Avoid infinite slopes
-        
-    #     path_angle = ca.atan(path_slope)
-
-    #     # Calculate heading error
-    #     epsi = psi_pred - path_angle
-
-    #     # Normalize EPSI within [-pi, pi] using CasADi functions
-    #     epsi = ca.fmod(epsi + ca.pi, 2 * ca.pi) - ca.pi
-
-    #     # Calculate the signed cross-track error
-    #     dx = x_pred - path_x[min_index]
-    #     dy = y_pred - path_y[min_index]
-    #     cte = -dx * ca.sin(path_angle) + dy * ca.cos(path_angle)
-
-    #     return cte, epsi
-    
     def spline(self, x, y):
         # Define symbolic interpolation for path using interp1d
         path_spline_y = ca.interpolant('spline', 'bspline', [x], y)
@@ -456,10 +349,8 @@ class MPC(Node):
     
     def calculate_errors_symbolic_spline(self, x_pred, y_pred, psi_pred):
         spline_value, spline_slope = self.spline_and_slope_func(x_pred)
-        #self.get_logger().info(f'slope = {spline_slope}')
 
         path_angle = ca.atan(spline_slope)  # Path angle from slope
-        
 
         # Calculate heading error (epsi)
         epsi = psi_pred - path_angle
@@ -467,28 +358,22 @@ class MPC(Node):
         # Normalize EPSI within [-pi, pi] using CasADi functions
         epsi = ca.fmod(epsi + ca.pi, 2 * ca.pi) - ca.pi
 
-
         # Calculate cross-track error (cte)
         cte = spline_value - y_pred  # Signed cross-track error
 
         return cte, epsi
 
-    
     def controller_callback(self):
         
         if len(self.x) == 0 and len(self.y) == 0:
             return
         if self.odom_status is None:
             return
-        # if self.v is None:
-        #     return
+
         if len(self.x_t) < 2 and len(self.y_t) < 2:
             return
         
-        # current_cte, current_epsi = self.calculate_errors(self.x_t[-1], self.y_t[-1], self.theta)
         self.initial_state = np.array([self.x_t[-1], self.y_t[-1], self.theta, self.v_init])  # Example initial state
-        #self.get_logger().info(f'x_t = {self.x_t[-1]}, y_t = {self.y_t[-1]}, theta = {self.theta}, v = {self.v_init}')
-        
         
         optimal_controls, predicted_vel, predicted_states = self.solve(self.initial_state)
 
@@ -496,31 +381,12 @@ class MPC(Node):
         delta = control_input[0]  # Steering angle
         a = control_input[1] # Acceleration
         self.v = predicted_vel[0]  # Predicted velocity
-        # print(f'predicted_x = {predicted_states[0,0]}\n, predicted_y = {predicted_states[1,0]}\n, predicted_psi = {predicted_states[2,0]}\n, predicted_v = {predicted_states[3,0]}\n, predicted_cte = {predicted_states[4,0]}\n, predicted_epsi = {predicted_states[5,0]}\n')
-        # print("-----------------------------------")
-        #self.get_logger().info(f'control input: {optimal_controls}')
-        #self.get_logger().info(f'predicted_cte = {predicted_states[4,0]}')
 
-        # self.delta = delta
-        # self.a = a
-        self.delta_c = delta
-        self.a_c = a
         self.predicted_states = predicted_states
 
-        # vel_input = (self.v[0] + self.v[-1])/2
-        # vel_input += a * self.dt
         self.v_init += a * self.dt
         vel_input = self.v_init
         self.get_logger().info(f'\nv: {self.v}\n a: {a}\n vel_input: {vel_input}')
-
-        # if self.predicted_states is None:
-        #     return
-        
-        # if self.v is None:
-        #     return
-        #print(f'lenght of x: {len(self.x)}, lenght of y: {len(self.y)}')
-        # Get the optimal control inputs
-        #delta, a, predicted_states = self.control_loop() # Get the optimal control inputs
 
         # Publish the steering angle
         float64_msg = Float64MultiArray()
@@ -537,10 +403,6 @@ class MPC(Node):
 
         self.initial_state = np.array([self.x_t[-1], self.y_t[-1], self.theta, vel_input])
         self.publish_predicted_states(self.predicted_states)
-
-        #self.get_logger().info(f'steering angle: {delta}, predicted velocity: {self.v[0]}')
-
-
 
 def main(args=None):
     rclpy.init(args=args)
