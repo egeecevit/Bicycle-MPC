@@ -16,10 +16,11 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     urdf_path = os.path.join(get_package_share_path('bicycle_description'),'urdf','robot.urdf.xacro')
     rviz_config_path = os.path.join(get_package_share_path('bicycle_bringup'),'config','simu.rviz')
+    world_path = os.path.join(get_package_share_path('bicycle_gazebo'),'worlds','empty.world')
 
     robot_description = Command(['xacro ', urdf_path])
 
-    world_config = LaunchConfiguration("world")
+    world_config = LaunchConfiguration("world", default=world_path)
 
     declare_world = DeclareLaunchArgument(
         name="world",
@@ -83,7 +84,7 @@ def generate_launch_description():
         arguments=[
             '-entity', 'bicycle', 
             '-topic', '/robot_description',
-            '-x', '0.0',
+            '-x', '25.0',
             '-y', '0.0',
             '-z', '0.0'
         ],

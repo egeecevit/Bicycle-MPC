@@ -75,8 +75,8 @@ class BicycleModelMPC:
         g = []
 
         # Define the Q and R matrices for state and control penalties
-        Q = ca.diagcat(1.0, 1.0, 1.0, 1.0, 50.0, 50.0)  # cte and epsi are weighted more because they are the main things to be penalized
-        R = ca.diagcat(0.1, 0.1)  # Adjust weights for control inputs
+        Q = ca.diagcat(0.0, 0.0, 0.0, 0.0, 5.0, 50.0)  # cte and epsi are weighted more because they are the main things to be penalized
+        R = ca.diagcat(1.0, 1.0)  # Adjust weights for control inputs
 
         # Initial state constraint
         g.append(X[:, 0] - initial_state)  # Ensure X[:, 0] == initial_state
@@ -109,12 +109,12 @@ class BicycleModelMPC:
         # Define bounds
         # Velocity, CTE, and EPSI limits
         vel_limit = [0, 5.0]
-        cte_limit = [0, 0.5]
+        cte_limit = 0.5
         epsi_limit = np.deg2rad(10)
 
         # State bounds: [x, y, psi, v, cte, epsi]
-        lb_states = ca.DM([-ca.inf, -ca.inf, -ca.inf, vel_limit[0], cte_limit[0], -epsi_limit])  
-        ub_states = ca.DM([ca.inf, ca.inf, ca.inf, vel_limit[1], cte_limit[1], epsi_limit])
+        lb_states = ca.DM([-ca.inf, -ca.inf, -ca.inf, vel_limit[0], -cte_limit, -epsi_limit])  
+        ub_states = ca.DM([ca.inf, ca.inf, ca.inf, vel_limit[1], cte_limit, epsi_limit])
 
         # Control bounds: [delta (steering angle), a (acceleration)]
         steering_angle_limit = np.deg2rad(30)  # 30 degrees in radians
@@ -149,32 +149,34 @@ class BicycleModelMPC:
             'ipopt': {
                 'print_level': 0,  # Suppresses IPOPT output
                 'sb': 'yes',       # Suppress banner
-                'tol': 1e-6,
+                #'tol': 1e-6,
+                'print_timing_statistics': 'yes',
+                'timing_statistics': 'yes',
             },
-            'print_time': 0
+            'print_time': 1
         }
-        solver = ca.nlpsol('solver', 'ipopt', nlp, options)
+        solver = ca.nlpsol('solver', 'ipopt', nlp)
 
         # Initial guess for the decision variables
-        x0_decision_vars = ca.DM.zeros(decision_vars.shape)
+        #x0_decision_vars = ca.DM.zeros(decision_vars.shape)
         '''-------------------------'''
         # Create a list to hold the state trajectory guesses, starting with the initial state
-        # state_guess = [initial_state]
+        state_guess = [initial_state]
 
-        # # Propagate the initial state forward using zero control inputs
-        # for _ in range(self.N):
-        #     # Predict next state assuming zero steering (delta) and zero acceleration (a)
-        #     next_state = self.f(state_guess[-1], [0, 0])  # Zero control input
-        #     state_guess.append(next_state.full().flatten())
+        # Propagate the initial state forward using zero control inputs
+        for _ in range(self.N):
+            # Predict next state assuming zero steering (delta) and zero acceleration (a)
+            next_state = self.f(state_guess[-1], [0, 0])  # Zero control input
+            state_guess.append(next_state.full().flatten())
 
-        # # Flatten the state trajectory guesses into a single column vector
-        # state_guess = np.hstack(state_guess).flatten()
+        # Flatten the state trajectory guesses into a single column vector
+        state_guess = np.hstack(state_guess).flatten()
 
-        # # Control input guess: All zeros (no control action)
-        # control_guess = np.zeros(2 * self.N)  # [delta, a] for N steps
+        # Control input guess: All zeros (no control action)
+        control_guess = np.zeros(2 * self.N)  # [delta, a] for N steps
 
-        # # Combine state and control guesses into the decision variable vector
-        # x0_decision_vars = np.hstack([state_guess, control_guess]).reshape(-1, 1)
+        # Combine state and control guesses into the decision variable vector
+        x0_decision_vars = np.hstack([state_guess, control_guess]).reshape(-1, 1)
 
         '''-------------------------'''
 
@@ -184,6 +186,9 @@ class BicycleModelMPC:
                         ubx=ub_decision_vars, 
                         lbg=lb_g, 
                         ubg=ub_g)
+
+        stats = solver.stats()
+        print(f"Solver iterations: {stats['iter_count']}")
 
         # Extract the optimal control inputs
         optimal_controls = solution['x'][num_states:num_states + 2 * self.N]
