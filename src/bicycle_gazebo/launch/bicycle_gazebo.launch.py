@@ -84,9 +84,12 @@ def generate_launch_description():
         arguments=[
             '-entity', 'bicycle', 
             '-topic', '/robot_description',
-            '-x', '25.0',
+            '-x', '0.0',
             '-y', '0.0',
-            '-z', '0.0'
+            '-z', '0.0',
+            '-R', '0.0',
+            '-P', '0.0',
+            '-Y', '0.0',
         ],
         output='screen',
     )
@@ -147,6 +150,12 @@ def generate_launch_description():
         output="screen",
     )
 
+    mpc_node = Node(
+        package="bicycle_mpc",
+        executable="mpc",
+        output="screen",
+    )
+
     return LaunchDescription([
         declare_use_sim_time,
         declare_world,
@@ -160,8 +169,9 @@ def generate_launch_description():
         tf_publisher,
         rviz2_node,
         path_node,
-        #vis_node,
+        vis_node,
         #sim_node,
         #vel_publisher_node,
         #circle_node,
+        #mpc_node,
     ])

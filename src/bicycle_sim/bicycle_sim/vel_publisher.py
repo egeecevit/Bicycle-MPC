@@ -11,7 +11,7 @@ class VelocityPublisher(Node):
 
     def publish_float(self):
         msg = Float64()
-        msg.data = 2.0  # m/s
+        msg.data = 1.2  # m/s
         self.publisher_.publish(msg)
 
 def main(args=None):

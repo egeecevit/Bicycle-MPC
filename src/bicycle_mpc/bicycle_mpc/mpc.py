@@ -40,9 +40,28 @@ class MPC(Node):
             '/predicted_trajectory',
             1
         )
-        self.dt = 0.1
+
+        self.vel_publisher = self.create_publisher(
+            Float64,
+            '/vel_topic',
+            1
+        )
+
+        self.rate_publisher = self.create_publisher(
+            Float64,
+            '/rate_topic',
+            1
+        )
+
+        self.steer_publisher = self.create_publisher(
+            Float64,
+            '/steer_topic',
+            1
+        )
+
+        self.dt = 0.05
         self.L = 0.4
-        self.N = 50
+        self.N = 30
         
         
 
@@ -50,14 +69,48 @@ class MPC(Node):
         self.y_t = []
 
         # Don't know why but published path has duplicate values
-        self.x = list(np.arange(-30.1, 50.1, 0.1))
+        ### PATH DEFINITION ###
+        # self.x = []
+        # self.y = []
+
+        # # Create the horizontal part of the "J"
+        # horizontal_length = 15.0  # Length of the horizontal part
+        # self.x.extend(np.arange(0.0, horizontal_length, 0.01))
+        # self.y.extend([0.0] * len(self.x))  # y stays constant along the horizontal part
+
+        # # Create the 1/8 circle part of the "J" that extends towards increasing x
+        # radius = 5.0  # Radius of the 1/8 circle
+        # num_points = 100  # Number of points to approximate the circle
+        # angles = np.linspace(0, math.pi / 4, num_points)  # Angles for 1/8 of the circle (π/4 = 45 degrees)
+
+        # for angle in angles:
+        #     self.x.append(horizontal_length + radius * math.sin(angle))  # x increases as sin(angle)
+        #     self.y.append(radius * (1 - math.cos(angle)))  # y forms the 1/8 circle, increasing in y direction
+
+        # # Create the 45-degree slope line
+        # line_length = 50.0  # Length of the line
+        # last_x = self.x[-1]
+        # last_y = self.y[-1]
+
+        # for i in np.arange(1.0, line_length, 0.01):
+        #     self.x.append(last_x + i)
+        #     self.y.append(last_y + i)  # Slope of 45 degrees means x and y increase by the same amount
+
+        # self.path_data = []
+
+        # for i, v in enumerate(self.x):
+        #     self.path_data.append([v, self.y[i]])
+
+        #---------------------------------#
+        self.x = list(np.arange(0.0, 50.01, 0.01))
         self.y = []
-        self.v_ref = [1.0] * (len(self.x) - 50) + [0.0] * 50
+        #self.v_ref = [1.0] * (len(self.x) - 50) + [0.0] * 50
         for num in self.x:
-            self.y.append(3*math.sin(num * 2.0 * math.pi / 20.0))
-            #self.y.append(0.0)
-            #self.y.append(num)
-            #self.y.append(num*math.tan(30*math.pi/180))
+            self.y.append(3*math.sin(num * 2.0 * math.pi / 10.0))
+        #     #self.y.append(3*math.cos(num * 2.0 * math.pi / 7.5))
+        #     #self.y.append(0.0)
+        #     #self.y.append(num)
+        #     #self.y.append(num*math.tan(30*math.pi/180))
 
         self.bicyc_length = 0.4
         self.wheel_rad = 0.05
@@ -67,11 +120,20 @@ class MPC(Node):
         self.theta = 0.0
         self.odom_timestamp = None
         self.v_init = 0.0
+        self.delta_init = 0.0
         self.predicted_states = None
         self.initial_state = None
         self.spline_func = None
         self.derivative_func = None
         self.spline_and_slope_func = None
+        # self.a_c = [0.0] * self.N
+        # self.steer_c = [0.0] * self.N
+        self.a_c = 0.0
+        self.steer_c = 0.0
+        self.v_ref = 5.0
+        self.v_limit = [0.2, 5.0]
+        self.cte_values = []
+        self.v_values = []
 
         self.define_variables()
         self.setup_model()
@@ -88,32 +150,34 @@ class MPC(Node):
         self.y_m = ca.MX.sym('y')
         self.psi_m = ca.MX.sym('psi')
         self.v_m = ca.MX.sym('v')
+        self.delta = ca.MX.sym('delta')
         
         # State vector
-        self.state = ca.vertcat(self.x_m, self.y_m, self.psi_m, self.v_m)
+        self.state = ca.vertcat(self.x_m, self.y_m, self.psi_m, self.v_m, self.delta)
         
         # Control variables
-        self.delta = ca.MX.sym('delta')  # Steering angle
+        self.steer_rate = ca.MX.sym('steer_rate')  # Steering angle
         self.a = ca.MX.sym('a')          # Acceleration
         
         # Control vector
-        self.control = ca.vertcat(self.delta, self.a)
+        self.control = ca.vertcat(self.steer_rate, self.a)
 
     def setup_model(self):
         # Define state transition equations
         x_next = self.x_m + self.v_m * ca.cos(self.psi_m) * self.dt
         y_next = self.y_m + self.v_m * ca.sin(self.psi_m) * self.dt
+        delta_next = self.delta + self.steer_rate * self.dt
         psi_next = self.psi_m + (self.v_m / self.L) * self.delta * self.dt
         v_next = self.v_m + self.a * self.dt
 
         # Update the state transition function to include cte and epsi
         self.f = ca.Function('f', [self.state, self.control], 
-                            [ca.vertcat(x_next, y_next, psi_next, v_next)])
+                            [ca.vertcat(x_next, y_next, psi_next, v_next, delta_next)])
         
 
     def solve(self, initial_state):
         # Define prediction horizon variables
-        X = ca.MX.sym('X', 4, self.N+1)  # State trajectory
+        X = ca.MX.sym('X', 5, self.N+1)  # State trajectory
         U = ca.MX.sym('U', 2, self.N)    # Control trajectory
 
         # Initialize cost and constraints
@@ -121,7 +185,7 @@ class MPC(Node):
         g = []
 
         # Define the Q and R matrices for state and control penalties
-        Q = ca.diagcat(0.0, 0.0, 0.0, 1.0)  # cte and epsi are weighted more because they are the main things to be penalized
+        #Q = ca.diagcat(0.0, 0.0, 0.0, 1.0)  # cte and epsi are weighted more because they are the main things to be penalized
         R = ca.diagcat(10.0, 2.0)  # Adjust weights for control inputs
 
         # Initial state constraint
@@ -132,7 +196,9 @@ class MPC(Node):
             # State cost: penalize deviations from desired state
             x = X[:, k]
 
-            cost += 5.0 * (x[3] - 1.2)**2  # Penalize velocity deviation from 1.0
+            cost += 10.0 * (x[3] - self.v_ref)**2  # Penalize velocity deviation from 1.2
+
+            cost += 50.0 * ca.mtimes(x[4],x[4].T)  # Penalize steering angle
 
             cte, epsi = self.calculate_errors_symbolic_spline(x[0], x[1], x[2]) 
             
@@ -159,16 +225,19 @@ class MPC(Node):
 
         # Define bounds
         # Velocity, CTE, and EPSI limits
-        vel_limit = [0, 1.5]
+        vel_limit = self.v_limit
+        steering_angle_limit = np.deg2rad(30.0)
+        #steering_angle_limit = ca.inf
 
         # State bounds: [x, y, psi, v]
-        lb_states = ca.DM([-ca.inf, -ca.inf, -ca.inf, vel_limit[0]])  
-        ub_states = ca.DM([ca.inf, ca.inf, ca.inf, vel_limit[1]])
+        lb_states = ca.DM([-ca.inf, -ca.inf, -ca.inf, vel_limit[0], -steering_angle_limit])  
+        ub_states = ca.DM([ca.inf, ca.inf, ca.inf, vel_limit[1], steering_angle_limit])
 
-        # Control bounds: [delta (steering angle), a (acceleration)]
-        steering_angle_limit = np.deg2rad(30)  # 30 degrees in radians
-        lb_controls = ca.DM([-steering_angle_limit, -1])  # [delta_min, a_min]
-        ub_controls = ca.DM([steering_angle_limit, 1])    # [delta_max, a_max]
+        # Control bounds: [steering angle rate, a (acceleration)]
+        steering_rate_limit = np.deg2rad(10.0)  # 10 degrees/sec in radians
+        #steering_rate_limit = ca.inf
+        lb_controls = ca.DM([-steering_rate_limit, -1])  # [delta_min, a_min]
+        ub_controls = ca.DM([steering_rate_limit, 1])    # [delta_max, a_max]
 
         # Apply state bounds only from the second state onward (skip initial state)
         lb_states_full = ca.repmat(lb_states, self.N, 1).reshape((-1, 1))  # N steps only
@@ -179,9 +248,9 @@ class MPC(Node):
         ub_controls_full = ca.repmat(ub_controls, self.N, 1).reshape((-1, 1))
 
         # Adjust to apply state bounds starting from the second predicted state onward
-        num_states = 4 * (self.N + 1)  # 6 states per step, N steps
-        lb_decision_vars[4: num_states] = lb_states_full  # Skip initial state (first 6 entries)
-        ub_decision_vars[4: num_states] = ub_states_full
+        num_states = 5 * (self.N + 1)  # 6 states per step, N steps
+        lb_decision_vars[5: num_states] = lb_states_full  # Skip initial state (first 6 entries)
+        ub_decision_vars[5: num_states] = ub_states_full
 
         # Apply control bounds as usual
         lb_decision_vars[num_states:] = lb_controls_full
@@ -213,8 +282,9 @@ class MPC(Node):
 
         # Propagate the initial state forward using zero control inputs
         for _ in range(self.N):
-            # Predict next state assuming zero steering (delta) and zero acceleration (a)
+            # Predict next state assuming zero steering rate (delta_dot) and zero acceleration (a)
             next_state = self.f(state_guess[-1], [0, 0])  # Zero control input
+            #next_state = self.f(state_guess[-1], [self.steer_c, self.a_c]) # Use the last control input
             state_guess.append(next_state.full().flatten())
 
         # Flatten the state trajectory guesses into a single column vector
@@ -244,7 +314,7 @@ class MPC(Node):
 
         # Extract the predicted state trajectory (including velocity)
         predicted_states = solution['x'][:num_states]
-        predicted_states = ca.reshape(predicted_states, 4, self.N + 1)
+        predicted_states = ca.reshape(predicted_states, 5, self.N + 1)
 
         # Extract the velocity trajectory from the predicted states
         predicted_velocity = predicted_states[3, :]  # Extract the velocity component (4th row)
@@ -350,6 +420,8 @@ class MPC(Node):
     def calculate_errors_symbolic_spline(self, x_pred, y_pred, psi_pred):
         spline_value, spline_slope = self.spline_and_slope_func(x_pred)
 
+        #spline_slope = ca.if_else(ca.fabs(spline_slope) > 1.1, 1.1, spline_slope)
+
         path_angle = ca.atan(spline_slope)  # Path angle from slope
 
         # Calculate heading error (epsi)
@@ -362,6 +434,17 @@ class MPC(Node):
         cte = spline_value - y_pred  # Signed cross-track error
 
         return cte, epsi
+    
+    def plot_cte_vs_velocity(self):
+        cte = max(self.cte_values)
+        plt.figure()
+        plt.scatter(self.v_ref, cte, color='r', label="CTE vs Velocity", marker='o')
+        plt.xlabel("Velocity (m/s)")
+        plt.ylabel("Cross Track Error (CTE)")
+        plt.title("CTE vs Velocity")
+        plt.legend()
+        plt.grid(True)
+        plt.show()
 
     def controller_callback(self):
         
@@ -373,36 +456,70 @@ class MPC(Node):
         if len(self.x_t) < 2 and len(self.y_t) < 2:
             return
         
-        self.initial_state = np.array([self.x_t[-1], self.y_t[-1], self.theta, self.v_init])  # Example initial state
+        self.initial_state = np.array([self.x_t[-1], self.y_t[-1], self.theta, self.v_init, self.delta_init])  # Example initial state
         
         optimal_controls, predicted_vel, predicted_states = self.solve(self.initial_state)
 
         control_input = optimal_controls[:, 0]
-        delta = control_input[0]  # Steering angle
+        steering_rate = control_input[0]  # Steering angle
         a = control_input[1] # Acceleration
         self.v = predicted_vel[0]  # Predicted velocity
 
         self.predicted_states = predicted_states
+        # orientation = predicted_states[2,:]
+        # x_pose = predicted_states[0,:]
+        # tot = 0.0
+        # for i in range(len(x_pose)-1):
+        #     path_slope = 3*2.0*math.pi*math.cos(x_pose[i]*2.0*math.pi/7.5)/7.5
+        #     path_slope = math.atan(path_slope)
+        #     tot += path_slope - orientation[i]
+        # self.get_logger().info(f'orientation: {tot}')
+        self.a_c = a
+        self.steer_c = steering_rate
+        #self.get_logger().info(f'shape a_c: {self.a_c[0]}\nshape steer_c: {self.steer_c[0]}')
 
         self.v_init += a * self.dt
         vel_input = self.v_init
-        self.get_logger().info(f'\nv: {self.v}\n a: {a}\n vel_input: {vel_input}')
+        #self.get_logger().info(f'\nv: {self.v}\n a: {a}\n vel_input: {vel_input}\n')
+
+        if steering_rate > np.deg2rad(10.0):
+            steering_rate = np.deg2rad(10.0)
+        elif steering_rate < -np.deg2rad(10.0):
+            steering_rate = -np.deg2rad(10.0)
+        else:
+            steering_rate = steering_rate
+
+        self.delta_init += steering_rate * self.dt
+        delta_input = self.delta_init
+        #self.get_logger().info(f'\nsteering_rate: {steering_rate*180/np.pi}\n delta_input: {delta_input*180/np.pi}\n')
 
         # Publish the steering angle
         float64_msg = Float64MultiArray()
-        float64_msg.data = [delta]
+        float64_msg.data = [delta_input]
         self.position_cmd_publisher_.publish(float64_msg)
+        self.rate_publisher.publish(Float64(data=steering_rate*180/np.pi))
+        self.steer_publisher.publish(Float64(data=delta_input*180/np.pi))
 
         # Publish the velocity
         velocity_msg = Float64MultiArray()
         self.w = vel_input / self.wheel_rad
-        w_r = self.w * math.cos(delta)
+        w_r = self.w * math.cos(delta_input)
         w_f = self.w
         velocity_msg.data = [float(w_r), float(w_f)]
         self.velocity_cmd_publisher_.publish(velocity_msg)
+        self.vel_publisher.publish(Float64(data=vel_input))
 
-        self.initial_state = np.array([self.x_t[-1], self.y_t[-1], self.theta, vel_input])
+        self.initial_state = np.array([self.x_t[-1], self.y_t[-1], self.theta, vel_input, delta_input])
         self.publish_predicted_states(self.predicted_states)
+
+        cte, epsi = self.calculate_errors(self.x_t[-1], self.y_t[-1], self.theta)
+
+        self.cte_values.append(cte)
+
+        if len(self.cte_values) > 1:  # Change to a condition that suits your case
+            print(f"Velocity: {self.v_ref}, Max CTE: {max(self.cte_values)}")
+
+        
 
 def main(args=None):
     rclpy.init(args=args)

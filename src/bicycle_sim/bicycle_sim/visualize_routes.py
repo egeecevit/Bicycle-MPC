@@ -7,7 +7,7 @@ import numpy as np
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Point
 from visualization_msgs.msg import Marker, MarkerArray
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Float64MultiArray
 
 
 class VisualizeRoute(Node):
@@ -34,27 +34,39 @@ class VisualizeRoute(Node):
             10
         )
 
+        self.steer_angle_subscriber_ = self.create_subscription(
+            Float64MultiArray,
+            '/position_controller/commands',
+            self.steer_callback,
+            10
+        )
+            
+
         self.current_x = 0.0
         self.current_y = 0.0
         self.current_theta = 0.0
         
         self.max_steering_angle = 35 * math.pi / 180  # Maximum steering angle
-        self.steering_rate = 6 * math.pi / 180  # Rate at which the steering angle changes per time step
+        self.steering_rate = 10 * math.pi / 180  # Rate at which the steering angle changes per time step
         self.min_steering_angle = -self.max_steering_angle # Minimum steering angle
         self.time_steps = 1000  # Number of time steps to simulate
         self.odom_status = None # Flag to check if the odometry message has been received
         self.velocities = None
         self.odom_timestamp = None
-        self.dt = 0.1
-        self.l = 3.30  # Wheelbase
+        self.dt = 0.05
+        self.l = 0.4  # Wheelbase
+        self.steer = 0.0
 
         self.timer = self.create_timer(1.0/30.0, self.timer_callback)
 
         self.get_logger().info("Visualize Route node has been started.")
 
 
+    def steer_callback(self, msg):
+        self.steer = msg.data[0]
+    
     def vel_callback(self, msg):
-        self.velocities = [msg.data/3.6, 5*msg.data/3.6, 10*msg.data/3.6]
+        self.velocities = [msg.data]
 
     def odom_callback(self, msg):
         self.current_x = msg.pose.pose.position.x
@@ -88,8 +100,8 @@ class VisualizeRoute(Node):
                 x_dec, y_dec, theta_dec = start_x, start_y, start_theta
                 #print(f'start_x: {start_x}, start_y: {start_y}, start_theta: {start_theta}')
                 
-                steering_angle_inc = 0.0 * math.pi / 180  # Start with 0 steering angle for increasing
-                steering_angle_dec = 0.0 * math.pi / 180  # Start with 0 steering angle for decreasing
+                steering_angle_inc = self.steer  # Start with 0 steering angle for increasing
+                steering_angle_dec = self.steer  # Start with 0 steering angle for decreasing
                 
                 for step in range(self.time_steps):
                     # Increasing steering angle

@@ -166,12 +166,15 @@ class Controller(Node):
                 self.alpha = np.arctan2((self.y_tp - self.y_t[-1]), (self.x_tp - self.x_t[-1])) - self.theta
 
         steering_ang = math.atan((2 * self.bicyc_length * math.sin(self.alpha)) / self.ld)
+        
 
-        if steering_ang >= 35*math.pi/180:
-            steering_ang = 35*math.pi/180
+        if steering_ang >= 10*math.pi/180:
+            steering_ang = 10*math.pi/180
 
-        if steering_ang <= -35*math.pi/180:
-            steering_ang = -35*math.pi/180
+        if steering_ang <= -10*math.pi/180:
+            steering_ang = -10*math.pi/180
+
+        self.get_logger().info(f'steering angle: {steering_ang * 180 / math.pi}')
 
         float64_msg = Float64MultiArray()
         float64_msg.data = [steering_ang]

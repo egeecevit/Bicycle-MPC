@@ -191,6 +191,18 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /predicted_trajectory
       Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: MarkerArray
+      Namespaces:
+        "": true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /marker_array
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -246,11 +258,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 96.75090026855469
+      Scale: 66.5165023803711
       Target Frame: base_link
       Value: TopDownOrtho (rviz_default_plugins)
-      X: 0
-      Y: 0
+      X: 1.3782732486724854
+      Y: 0.7566990256309509
     Saved: ~
 Window Geometry:
   Displays:

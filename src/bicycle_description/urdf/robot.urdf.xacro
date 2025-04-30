@@ -5,10 +5,10 @@
     <xacro:include filename="ros2_control.xacro" />
     
     <xacro:property name = "base_length" value = "0.5"/>
-    <xacro:property name = "base_width" value = "0.1"/>
+    <xacro:property name = "base_width" value = "0.2"/>
     <xacro:property name = "base_height" value = "0.05"/>
     <xacro:property name = "wheel_radius" value = "0.05"/>
-    <xacro:property name = "wheel_length" value = "0.1"/>
+    <xacro:property name = "wheel_length" value = "0.2"/>
     <xacro:property name = "cylinder_length" value = "0.1"/>
     <xacro:property name = "cylinder_radius" value = "0.01"/>
     
@@ -110,7 +110,7 @@
                 <cylinder radius = "0.01" length = "${cylinder_length}"/>
             </geometry>
             <origin xyz = "0 0 0" rpy = "0 0 0"/>
-            <material name = "grey"/>
+            <material name = "green"/>
         </visual>
         <collision>
             <geometry>
@@ -129,7 +129,7 @@
                 <cylinder radius = "0.01" length = "${cylinder_length}"/>
             </geometry>
             <origin xyz = "0 0 0" rpy = "0 0 0"/>
-            <material name = "grey"/>
+            <material name = "green"/>
         </visual>
         <collision>
             <geometry>
@@ -158,7 +158,7 @@
     </joint>
 
     <joint name = "front_wheel_joint" type = "continuous">
-        <origin xyz = "0 0 ${-wheel_radius-wheel_length/2}" rpy = "${-pi/2} 0 0"/>
+        <origin xyz = "0 0 ${-wheel_radius-wheel_length/4}" rpy = "${-pi/2} 0 0"/>
         <parent link = "front_wheel_cylinder"/>
         <child link = "front_wheel"/>
         <axis xyz = "0 0 1"/>
@@ -171,7 +171,7 @@
     </joint>
 
     <joint name = "rear_wheel_joint" type = "continuous">
-        <origin xyz = "0 0 ${-wheel_radius-wheel_length/2}" rpy = "${-pi/2} 0 0"/>
+        <origin xyz = "0 0 ${-wheel_radius-wheel_length/4}" rpy = "${-pi/2} 0 0"/>
         <parent link = "rear_wheel_cylinder"/>
         <child link = "rear_wheel"/>
         <axis xyz = "0 0 1"/>
@@ -182,15 +182,19 @@
     </gazebo>
 
     <!-- <gazebo reference="rear_wheel">
-        <material>Gazebo/Black</material>
-        <mu1 value="0.1"/>
-        <mu2 value="0.1"/>
+        <material>Gazebo/Black</material>   
     </gazebo>
 
     <gazebo reference="front_wheel">
         <material>Gazebo/Black</material>
-        <mu1 value="0.1"/>
-        <mu2 value="0.1"/>
+    </gazebo>
+
+    <gazebo reference="front_wheel_cylinder">
+        <material>Gazebo/Blue</material>
+    </gazebo>
+
+    <gazebo reference="rear_wheel_cylinder">
+        <material>Gazebo/Blue</material>
     </gazebo> -->
 
     <!-- <gazebo reference="base_link">

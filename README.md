@@ -1,6 +1,8 @@
 # Bicycle Model Possible Path Visualization
 This documentation is for a simple bicycle model simulation.
 
+check this link for working animation of the bicycle model: [Bicycle Model Simulation](https://drive.google.com/drive/folders/1cEZ6Aic3mRBYeX0QELJeE67qpIycV83I?usp=sharing)
+
 ## Table of Contents
 - [Packages](#packages)
 - [Parameter Tuning](#parameter-tuning)
